@@ -1,0 +1,25 @@
+#!/bin/bash
+
+SRC_FILEPATH=/home/artvybor/uid_ua_100k
+TOPIC=test
+BROKERS=mipt-node06.atp-fivt.org:9092
+
+FOLDER=/tmp/kafka_sender/${USER}_$(date +%s)
+
+SPLIT_DIR=$FOLDER/splitted_data
+KAFKA_STDERR=$FOLDER/kafka_send_stderr
+KAFKA_STDOUT=$FOLDER/kafka_send_stdout
+
+# split SRC_FILE
+rm -rf $SPLIT_DIR && mkdir -p $SPLIT_DIR && split -d -l 5000 $SRC_FILEPATH $SPLIT_DIR/x
+
+# infinitly sent files to kafka
+while true; do 
+    time for file in $SPLIT_DIR/*; do
+        echo $file;
+        # cat $file | nc -w 1 localhost 10321;
+        cat $file | kafka-console-producer --broker-list $BROKERS --topic $TOPIC 2> $KAFKA_STDERR 1> $KAFKA_STDOUT
+        echo "$file sent"
+        sleep 1s;
+    done;
+done
