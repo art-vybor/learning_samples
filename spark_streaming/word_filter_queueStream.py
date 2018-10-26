@@ -2,6 +2,7 @@ from pyspark import SparkContext
 from pyspark.streaming import StreamingContext
 
 sc = SparkContext(master='local[4]')
+ssc = StreamingContext(sc, batchDuration=1)
 
 def ls(directory):
     hadoop = sc._jvm.org.apache.hadoop
@@ -10,11 +11,14 @@ def ls(directory):
     path = hadoop.fs.Path(directory)
     return [f.getPath() for f in fs.get(conf).listStatus(path)]
 
-ls_result = ls('hdfs:///data/course4//uid_ua_100k_splitted_by_5k/')
-files = list(map(str, ls_result))
+ls_result = ls('hdfs:///data/griboedov/')
 
-print('\n'.join(files))
-print('============================================')
+batches = [sc.textFile(f) for f in map(str, ls_result)]
+dstream = ssc.queueStream(rdds=batches)
 
-print('\n'.join(sc.textFile(files[0]).take(10)))
+result = dstream.filter(bool).count()
 
+result.pprint()
+
+ssc.start()
+ssc.awaitTermination()
